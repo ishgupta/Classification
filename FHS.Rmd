@@ -1,0 +1,88 @@
+---
+title: "Framingham Heart Study"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+### Load requried Libraries.
+```{r, message=FALSE}
+library(dplyr)
+library(caTools)
+```
+
+### Read the data into R.
+```{r}
+data <- read.csv("data/framingham.csv")
+
+glimpse(data)
+```
+
+#### Data Attributes:
+demographic Risk factors: Age, Male, Education
+Behavioral: Current smoker, cigs per day
+medical history risk factors: BPMeds, prevalentStroke, prevalentHyp, diabetes
+Physical exam risk factors: totChol, sysBP, diaBP, BMI, heartRate, glucose
+outcome variable: whether or not patient developed CHD in next 10 years.
+
+
+#### Split the data into training and test sets.
+Set the seed, since R generated the sample randomly
+Since, we have much data- we can distribute mnore amount of data for Test set.
+```{r}
+set.seed(1000)
+split <- sample.split(data$TenYearCHD, 0.65)
+
+train <- subset(data, split)
+test <- subset(data, !split)
+```
+
+### Create a model fit
+```{r}
+glm.fit <- glm(TenYearCHD ~ ., data = train, family = binomial)
+summary(glm.fit)
+
+```
+
+
+#### Make predictions on test data
+
+```{r}
+predictTest <- predict(glm.fit, type="response", newdata = test)
+table(test$TenYearCHD, predictTest > 0.5)
+
+modelAccuracy = (1070+21)/1484
+modelAccuracy
+```
+Accuracy = 73.52%
+
+#### Compare accuracy to a simple Baseline Method. The more frequent outcome in this case is 0. So, a baseline method will predict a 0, i.e. No CHD.
+
+Accuracy of the baseline method = (1070 + 13)/ 1484 -> 72.9%
+Model barely meets the Baseline in terms of Accuracy.
+
+#### Let's compute ROC to measure the accuracy while varying the Threshold.
+
+```{r, message=FALSE}
+library(ROCR)
+```
+
+```{r}
+ROCR_pred <- prediction(predictTest, test$TenYearCHD)
+plot(performance(ROCR_pred, "tpr", "fpr"), colorize = TRUE, print.cutoffs.at = seq(0, 1, 0.1), text.adj = c(-0.2, 1.7))
+
+
+as.numeric(performance(ROCR_pred, "auc")@y.values)
+```
+
+This gives the AUC values on a testing set. So, the AUC of 73% means that the model can differentiate between low risk and high Risk patients very well.
+
+
+### Validate the Model:
+Compare the results of FHS with the other Studies which were carried on different populations, and compare the Results for Accuracy.
+
+ARIC Study- White and Black
+(Honolulu) HHP - Japanese American
+(Peurto Rico) PR- Hispanic
+SHS- Native American
+

@@ -1,0 +1,39 @@
+---
+title: "QDA"
+output: html_notebook
+---
+
+
+```{r, message=FALSE}
+library(MASS)
+library(ISLR)
+data("Smarket")
+```
+
+```{r, echo=TRUE}
+attach(Smarket)
+train <- Year < 2004
+
+Smarket.2005 <- Smarket[!train, ]
+Direction.2005 <- Direction[!train]
+
+qda.fit <- qda(Direction ~ Lag1 + Lag2, data=Smarket, subset = train)
+qda.fit
+
+
+
+```
+
+the output contains Group means, but does not provide the Coefficients of the linear discriminants, because the QDA classifier involves a quadratic, rather than a linear, function of the predictors.
+
+####Predict
+
+```{r}
+qda.pred <- predict(qda.fit, newdata = Smarket.2005)
+qda.class <- qda.pred$class
+
+table(qda.class, Direction.2005)
+
+mean(qda.class==Direction.2005)
+```
+

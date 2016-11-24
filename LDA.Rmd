@@ -1,0 +1,63 @@
+---
+title: "Classification- Linear Discriminant Analysis"
+output: html_notebook
+---
+
+
+```{r, message= FALSE}
+library(MASS)
+library(ISLR)
+data(Smarket)
+
+```
+
+
+```{r}
+attach(Smarket)
+train <- Year < 2005
+
+Smarket.2005 <- Smarket[!train, ]
+Direction.2005 <- Direction[!train]
+```
+
+```{r, echo=TRUE}
+lda.fit <- lda(Direction ~ Lag1 + Lag2, data = Smarket, subset=train)
+lda.fit
+
+plot(lda.fit)
+```
+
+From prior probabilities, it can be seen that the market went Down for 49% of the Days, and 51% of times, it went UP.
+
+if -0.642 X Lag1 - 0.514 X Lag2 is large, LDA will predict a market increase, and if it is small, then the LDA classifier will predict a DECLINE.
+
+The plot() prodcues plots of the linear discriminants, obtained by computing -0.642 X Lag1 - 0.514 X Lag2 for each of the training observations.
+
+The rpedict() returns a list with 3 elements. The first element, class, contains LDA's predictions about the movement of the market, posterior prabability that the corresponding observation belongs to the kth class.
+Finally, x contains the linear discriminants:
+
+```{r}
+lda.pred <- predict(lda.fit, Smarket.2005)
+names(lda.pred)
+
+lda.class <- lda.pred$class
+
+table(lda.class, Direction.2005)
+mean(lda.class==Direction.2005)
+
+```
+
+
+```{r}
+sum(lda.pred$posterior[, 1] >= 0.5)
+sum(lda.pred$posterior[, 1] < 0.5)
+
+lda.pred$posterior[1:20, 1]
+lda.class[1:20]
+```
+
+If we wanted to use a posterior probability threshold other than 50% for predictions. We could do:
+```{r}
+sum(lda.pred$posterior[, 1] > 0.9)
+```
+

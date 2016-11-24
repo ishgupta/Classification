@@ -1,0 +1,107 @@
+---
+title: "GLM on Hospital quality data"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+```{r, message=FALSE}
+library(caTools)
+library(dplyr)
+
+
+```
+
+#### Collect data and build a model.
+```{r}
+quality = read.csv("data/quality.csv")
+glimpse(quality)
+
+table(quality$PoorCare)
+
+set.seed(88)
+split <- sample.split(quality$PoorCare, SplitRatio = 0.75)
+qualityTrain <- subset(quality, split)
+qualityTest <- subset(quality, !split)
+
+qualityLog <- glm(PoorCare ~ OfficeVisits + Narcotics, data= qualityTrain, family = binomial)
+summary(qualityLog)
+
+glm.fit <- glm(PoorCare ~ OfficeVisits + AcuteDrugGapSmall, data = qualityTrain, family = binomial)
+summary(glm.fit)
+
+predictTrain <- predict(qualityLog, type="response")
+summary(predictTrain)
+
+tapply(predictTrain, qualityTrain$PoorCare, mean)
+
+
+```
+
+If we consider a threshold of 0.5, Specificity and Sensitivity can be calculated as:
+
+```{r}
+table(qualityTrain$PoorCare, predictTrain > 0.5)
+
+Sensitivity = 10/25
+Specificity = 70/74
+
+
+```
+
+
+Increasing the Threshold of 0.7
+
+```{r}
+
+table(qualityTrain$PoorCare, predictTrain > 0.7)
+
+Sensitivity = 8/25
+Specificity = 73/74
+
+```
+
+AS can be seen, by increasing the threshold- Sensitivity went DOWN, and Specificity increased.
+
+Decreasing the Threshold will increase the Sensitivity and lower the Specificity
+```{r}
+
+table(qualityTrain$PoorCare, predictTrain > 0.2)
+
+Sensitivity = 16/25
+Specificity = 54/74
+
+```
+
+
+### Select a threshold value using an ROC Curve (Receiver Operator Characteristic Curve)
+
+```{r}
+library(ROCR)
+
+ROCR_pred <- prediction(predictTrain, qualityTrain$PoorCare)
+
+ROCR_perf <- performance(ROCR_pred, "tpr", "fpr")
+plot(ROCR_perf)
+
+plot(ROCR_perf, colorize = TRUE)
+
+plot(ROCR_perf, colorize = TRUE, print.cutoffs.at = seq(0, 1, 0.1), text.adj=c(-0.2, 1.7))
+
+```
+
+
+### Make predictions on the Test data:
+
+```{r}
+predictTest <- predict(qualityLog, newdata=qualityTest, type = "response")
+
+table(predictTest > 0.5, qualityTest$PoorCare)
+tapply(predictTest, qualityTest$PoorCare, mean)
+
+ROCR_test_pred <- prediction(predictTest, qualityTest$PoorCare)
+ROCR_test_perf <- performance(ROCR_test_pred, "tpr", "fpr")
+
+plot(ROCR_test_perf, colorize = TRUE, print.cutoffs.at = seq(0,1, 0.1), text.adj = c(-0.1, 2.0))
+```
+
